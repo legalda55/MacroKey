@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =======================================================================
+     Single Macro Block Tile
+     =======================================================================
+     Each tile is a colored rounded rectangle with the block title centered.
+     Designed for fast visual recognition (color + title = muscle memory).
+     
+     The background color is set programmatically via GradientDrawable.
+     ======================================================================= -->
+
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="4dp">
+
+    <TextView
+        android:id="@+id/tvBlockTitle"
+        android:layout_width="match_parent"
+        android:layout_height="72dp"
+        android:gravity="center"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:background="@drawable/block_tile_bg"
+        android:foreground="?android:attr/selectableItemBackground" />
+
+</FrameLayout>

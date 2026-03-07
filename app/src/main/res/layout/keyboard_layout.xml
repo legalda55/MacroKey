@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- =======================================================================
+     MacroKey Keyboard Layout
+     =======================================================================
+     This is the root view of the custom keyboard. It uses traditional Android
+     Views (not Compose) for fast cold-boot performance in InputMethodService.
+     
+     Structure:
+     - Dark background container
+     - RecyclerView for the scrollable block grid
+     - "Open Settings" button at the bottom
+     ======================================================================= -->
+
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#1A1A2E"
+    android:padding="8dp">
+
+    <!-- Scrollable grid of macro blocks -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerBlocks"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:padding="4dp"
+        android:overScrollMode="never"
+        tools:listitem="@layout/item_macro_block" />
+
+    <!-- Empty state: shown when no blocks are created yet -->
+    <TextView
+        android:id="@+id/tvEmptyState"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="24dp"
+        android:text="No blocks yet.\nOpen MacroKey app to create your first block."
+        android:textColor="#80FFFFFF"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
+    <!-- Quick settings access button -->
+    <TextView
+        android:id="@+id/btnOpenSettings"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="10dp"
+        android:text="⚙ MacroKey Settings"
+        android:textColor="#80FFFFFF"
+        android:textSize="12sp"
+        android:background="?android:attr/selectableItemBackground" />
+
+</LinearLayout>

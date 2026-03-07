@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.macrokey">
+
+    <!-- הצגה מעל אפליקציות — לכפתור הצף -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="MacroKey"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.MacroKey">
+
+        <!-- מסך Onboarding — נקודת הכניסה הראשית -->
+        <activity
+            android:name=".ui.OnboardingActivity"
+            android:exported="true"
+            android:label="MacroKey">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- מסך ההגדרות הראשי -->
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="false"
+            android:label="MacroKey" />
+
+        <!-- מדריך למשתמש -->
+        <activity
+            android:name=".ui.GuideActivity"
+            android:exported="false"
+            android:label="MacroKey" />
+
+        <!-- מדיניות פרטיות -->
+        <activity
+            android:name=".ui.PrivacyActivity"
+            android:exported="false"
+            android:label="MacroKey" />
+
+        <!-- קבלת טקסט משיתוף -->
+        <activity
+            android:name=".ui.ShareReceiverActivity"
+            android:exported="true"
+            android:label="שמור ב-MacroKey"
+            android:theme="@style/Theme.MacroKey.Transparent">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <!-- שירות הליבה: נגישות + כפתור צף -->
+        <service
+            android:name=".service.MacroKeyAccessibilityService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+    </application>
+</manifest>
