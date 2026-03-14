@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,6 +27,56 @@
             -webkit-font-smoothing: antialiased;
         }
 
+        /* ── Language Toggle ── */
+        .lang-toggle {
+            position: fixed;
+            top: 1.2rem;
+            right: 1.2rem;
+            z-index: 1000;
+            display: flex;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+            border: 1px solid rgba(230,74,25,0.15);
+        }
+
+        .lang-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            background: transparent;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--gray);
+            transition: all 0.2s ease;
+        }
+
+        .lang-btn.active {
+            background: var(--orange);
+            color: white;
+        }
+
+        /* RTL support */
+        html[dir="rtl"] .lang-toggle {
+            right: auto;
+            left: 1.2rem;
+        }
+
+        html[dir="rtl"] .problem-card {
+            border-left: none;
+            border-right: 4px solid var(--orange);
+        }
+
+        html[dir="rtl"] .phone-header {
+            text-align: right;
+        }
+
+        html[dir="rtl"] .price-perks {
+            text-align: right;
+        }
+
         /* ── Hero ── */
         .hero {
             min-height: 100vh;
@@ -37,7 +87,7 @@
             text-align: center;
             padding: 2rem;
             position: relative;
-            background: 
+            background:
                 radial-gradient(ellipse at 20% 50%, rgba(230,74,25,0.08) 0%, transparent 50%),
                 radial-gradient(ellipse at 80% 20%, rgba(255,112,66,0.06) 0%, transparent 50%),
                 var(--cream);
@@ -47,7 +97,7 @@
             content: '';
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            background-image: 
+            background-image:
                 radial-gradient(circle at 1px 1px, rgba(230,74,25,0.07) 1px, transparent 0);
             background-size: 40px 40px;
             pointer-events: none;
@@ -124,6 +174,79 @@
             margin-top: 1rem;
             font-size: 0.95rem;
             color: var(--gray);
+        }
+
+        /* ── The Problem ── */
+        .problem {
+            padding: 5rem 2rem;
+            background: white;
+        }
+
+        .problem-inner {
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        .problem h2 {
+            font-size: clamp(1.8rem, 4vw, 2.6rem);
+            font-weight: 700;
+            margin-bottom: 3rem;
+            letter-spacing: -0.01em;
+        }
+
+        .problem-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .problem-card {
+            background: var(--gray-light);
+            border-radius: 20px;
+            padding: 2rem;
+            border-left: 4px solid var(--orange);
+        }
+
+        .problem-scene {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.8rem;
+            margin-bottom: 1rem;
+        }
+
+        .problem-emoji {
+            font-size: 1.6rem;
+            line-height: 1;
+            min-width: 30px;
+        }
+
+        .problem-quote {
+            font-size: 1.05rem;
+            font-weight: 600;
+            font-style: italic;
+            color: var(--dark);
+            line-height: 1.5;
+        }
+
+        .problem-desc {
+            font-size: 0.95rem;
+            color: var(--gray);
+            line-height: 1.65;
+        }
+
+        .problem-punchline {
+            text-align: center;
+            font-size: 1.15rem;
+            color: var(--gray);
+            line-height: 1.7;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .problem-punchline strong {
+            color: var(--orange);
+            font-size: 1.25rem;
         }
 
         /* ── How It Works ── */
@@ -413,7 +536,7 @@
         }
 
         .price-perks li::before {
-            content: '✓';
+            content: '\2713';
             color: var(--orange);
             font-weight: 700;
         }
@@ -446,6 +569,7 @@
             .hero { padding: 4rem 1.5rem 3rem; }
             .steps { grid-template-columns: 1fr; }
             .demo-blocks { grid-template-columns: 1fr 1fr; }
+            .problem-grid { grid-template-columns: 1fr; }
             .use-grid { grid-template-columns: 1fr; }
             .feat-grid { grid-template-columns: 1fr; }
         }
@@ -453,37 +577,82 @@
 </head>
 <body>
 
+<!-- ── Language Toggle ── -->
+<div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" onclick="setLang('he')">עב</button>
+</div>
+
 <!-- ── Hero ── -->
 <section class="hero">
     <div class="hero-icon">M</div>
-    <h1>Stop typing the same thing <span>over and over</span></h1>
-    <p>Save any text once. Paste it into any app with one tap. Bank details, client replies, form answers — always ready, always instant.</p>
+    <h1>
+        <span class="i18n" data-en="Stop typing the same thing " data-he="הפסיקו להקליד את אותו דבר "></span><span class="i18n" style="color:var(--orange)" data-en="over and over" data-he="שוב ושוב"></span>
+    </h1>
+    <p class="i18n" data-en="Save any text once. Paste it into any app with one tap. Bank details, client replies, form answers — always ready, always instant." data-he="שמרו כל טקסט פעם אחת. הדביקו אותו בכל אפליקציה בלחיצה אחת. פרטי בנק, תשובות ללקוחות, פרטים לטפסים — תמיד מוכן, תמיד מיידי."></p>
     <a href="https://play.google.com/store/apps/details?id=com.macrokey" class="cta-btn">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.61 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.5,12.92 20.16,13.19L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z"/></svg>
-        Get it on Google Play
+        <span class="i18n" data-en="Get it on Google Play" data-he="הורידו מ-Google Play"></span>
     </a>
-    <p class="hero-price">Free 7-day trial · Then $4.99 one-time</p>
+    <p class="hero-price i18n" data-en="Free 7-day trial &middot; Then $4.99 one-time" data-he="7 ימי ניסיון חינם &middot; אחר כך $4.99 תשלום חד-פעמי"></p>
+</section>
+
+<!-- ── The Problem ── -->
+<section class="problem">
+    <div class="problem-inner">
+        <div class="section-label i18n" data-en="Sound familiar?" data-he="נשמע מוכר?"></div>
+        <h2>
+            <span class="i18n" data-en="You type the same things " data-he="אתם מקלידים את אותם דברים "></span><span style="color:var(--orange)" class="i18n" data-en="every single day" data-he="כל יום מחדש"></span>
+        </h2>
+        <div class="problem-grid">
+            <div class="problem-card">
+                <div class="problem-scene">
+                    <span class="problem-emoji">💬</span>
+                    <p class="problem-quote i18n" data-en="&quot;Hey, can you send me your bank details?&quot;" data-he="&quot;היי, אפשר לשלוח לי את פרטי הבנק שלך?&quot;"></p>
+                </div>
+                <p class="problem-desc i18n" data-en="You open Notes. Scroll. Copy. Switch apps. Paste. Again. For the 50th time this year." data-he="אתם פותחים את הפתקים. גוללים. מעתיקים. מחליפים אפליקציה. מדביקים. שוב. בפעם ה-50 השנה."></p>
+            </div>
+            <div class="problem-card">
+                <div class="problem-scene">
+                    <span class="problem-emoji">📧</span>
+                    <p class="problem-quote i18n" data-en="&quot;Please fill in your address and ID number&quot;" data-he="&quot;נא למלא כתובת ומספר ת&quot;ז&quot;"></p>
+                </div>
+                <p class="problem-desc i18n" data-en="Another form. Same details. You start typing from memory — was it apartment 12 or 12A?" data-he="עוד טופס. אותם פרטים. אתם מתחילים להקליד מהזיכרון — זה היה דירה 12 או 12א?"></p>
+            </div>
+            <div class="problem-card">
+                <div class="problem-scene">
+                    <span class="problem-emoji">🤦</span>
+                    <p class="problem-quote i18n" data-en="&quot;Can you resend that contract clause?&quot;" data-he="&quot;אפשר לשלוח שוב את הסעיף מהחוזה?&quot;"></p>
+                </div>
+                <p class="problem-desc i18n" data-en="You dig through old WhatsApp messages, scroll back three months, find it, copy, switch apps, paste. Five minutes gone." data-he="אתם חופרים בהודעות ישנות בוואטסאפ, גוללים שלושה חודשים אחורה, מוצאים, מעתיקים, מחליפים אפליקציה, מדביקים. חמש דקות בטלות."></p>
+            </div>
+        </div>
+        <p class="problem-punchline">
+            <span class="i18n" data-en="Every day, you waste time retyping text you've already written." data-he="כל יום אתם מבזבזים זמן על הקלדה מחדש של טקסטים שכבר כתבתם."></span><br>
+            <strong class="i18n" data-en="MacroKey makes it one tap." data-he="MacroKey הופכת את זה ללחיצה אחת."></strong>
+        </p>
+    </div>
 </section>
 
 <!-- ── How It Works ── -->
 <section class="how">
-    <div class="section-label">How it works</div>
-    <h2>Three taps. That's it.</h2>
+    <div class="section-label i18n" data-en="How it works" data-he="איך זה עובד"></div>
+    <h2 class="i18n" data-en="Three taps. That's it." data-he="שלוש לחיצות. זהו."></h2>
     <div class="steps">
         <div class="step">
             <div class="step-num">01</div>
-            <h3>Save your text</h3>
-            <p>Open MacroKey, create a block. Give it a name, pick a color, paste your text. You'll only do this once.</p>
+            <h3 class="i18n" data-en="Save your text" data-he="שמרו את הטקסט"></h3>
+            <p class="i18n" data-en="Open MacroKey, create a block. Give it a name, pick a color, paste your text. You'll only do this once." data-he="פתחו את MacroKey, צרו בלוק. תנו לו שם, בחרו צבע, הדביקו את הטקסט. תעשו את זה רק פעם אחת."></p>
         </div>
         <div class="step">
             <div class="step-num">02</div>
-            <h3>Tap the floating button</h3>
-            <p>A small M button sits on your screen, always ready. When you need your text — in WhatsApp, Gmail, SMS, anywhere — tap it.</p>
+            <h3 class="i18n" data-en="Tap the floating button" data-he="לחצו על הכפתור הצף"></h3>
+            <p class="i18n" data-en="A small M button sits on your screen, always ready. When you need your text — in WhatsApp, Gmail, SMS, anywhere — tap it." data-he="כפתור M קטן יושב על המסך, תמיד מוכן. כשצריך את הטקסט — בוואטסאפ, ג'ימייל, SMS, בכל מקום — לחצו עליו."></p>
         </div>
         <div class="step">
             <div class="step-num">03</div>
-            <h3>Tap your block</h3>
-            <p>Your color-coded blocks appear. Tap one and the full text pastes instantly into whatever app you're using. Done.</p>
+            <h3 class="i18n" data-en="Tap your block" data-he="לחצו על הבלוק"></h3>
+            <p class="i18n" data-en="Your color-coded blocks appear. Tap one and the full text pastes instantly into whatever app you're using. Done." data-he="הבלוקים הצבעוניים מופיעים. לחצו על אחד והטקסט המלא מודבק מיד באפליקציה שאתם משתמשים בה. נגמר."></p>
         </div>
     </div>
 </section>
@@ -492,14 +661,14 @@
 <section class="demo-section">
     <div class="phone-mockup">
         <div class="phone-screen">
-            <div class="phone-header">⬤ MacroKey</div>
+            <div class="phone-header">&#x2B24; MacroKey</div>
             <div class="demo-blocks">
-                <div class="demo-block b-green">Bank Details</div>
-                <div class="demo-block b-red">Contract Clause</div>
-                <div class="demo-block b-blue">Client Reply</div>
-                <div class="demo-block b-purple">Home Address</div>
-                <div class="demo-block b-orange">Invoice Text</div>
-                <div class="demo-block b-teal">ID Number</div>
+                <div class="demo-block b-green i18n" data-en="Bank Details" data-he="פרטי בנק"></div>
+                <div class="demo-block b-red i18n" data-en="Contract Clause" data-he="סעיף חוזה"></div>
+                <div class="demo-block b-blue i18n" data-en="Client Reply" data-he="תשובה ללקוח"></div>
+                <div class="demo-block b-purple i18n" data-en="Home Address" data-he="כתובת בית"></div>
+                <div class="demo-block b-orange i18n" data-en="Invoice Text" data-he="טקסט חשבונית"></div>
+                <div class="demo-block b-teal i18n" data-en="ID Number" data-he="מספר ת&quot;ז"></div>
             </div>
         </div>
     </div>
@@ -508,38 +677,38 @@
 <!-- ── Use Cases ── -->
 <section class="usecases">
     <div class="usecases-inner">
-        <div class="section-label">Who is it for</div>
-        <h2>If you type it twice, you need MacroKey</h2>
+        <div class="section-label i18n" data-en="Who is it for" data-he="למי זה מתאים"></div>
+        <h2 class="i18n" data-en="If you type it twice, you need MacroKey" data-he="אם הקלדתם את זה פעמיים, אתם צריכים MacroKey"></h2>
         <div class="use-grid">
             <div class="use-card">
                 <div class="use-emoji">🏦</div>
-                <h3>Bank & payment details</h3>
-                <p>Stop digging through notes every time someone asks for your bank info. One tap — sent.</p>
+                <h3 class="i18n" data-en="Bank & payment details" data-he="פרטי בנק ותשלום"></h3>
+                <p class="i18n" data-en="Stop digging through notes every time someone asks for your bank info. One tap — sent." data-he="הפסיקו לחפור בפתקים כל פעם שמישהו מבקש את פרטי הבנק שלכם. לחיצה אחת — נשלח."></p>
             </div>
             <div class="use-card">
                 <div class="use-emoji">💬</div>
-                <h3>Customer replies</h3>
-                <p>Same question, same answer. Save your best replies and send them in seconds, not minutes.</p>
+                <h3 class="i18n" data-en="Customer replies" data-he="תשובות ללקוחות"></h3>
+                <p class="i18n" data-en="Same question, same answer. Save your best replies and send them in seconds, not minutes." data-he="אותה שאלה, אותה תשובה. שמרו את התשובות הטובות שלכם ושלחו אותן בשניות, לא בדקות."></p>
             </div>
             <div class="use-card">
                 <div class="use-emoji">📋</div>
-                <h3>Forms & applications</h3>
-                <p>Name, address, ID, phone — paste your details into any form without retyping every field.</p>
+                <h3 class="i18n" data-en="Forms & applications" data-he="טפסים ובקשות"></h3>
+                <p class="i18n" data-en="Name, address, ID, phone — paste your details into any form without retyping every field." data-he="שם, כתובת, ת&quot;ז, טלפון — הדביקו את הפרטים שלכם בכל טופס בלי להקליד כל שדה מחדש."></p>
             </div>
             <div class="use-card">
                 <div class="use-emoji">📝</div>
-                <h3>Legal & contract text</h3>
-                <p>Standard clauses, disclaimers, terms — paste exact wording every time without copy-paste from old emails.</p>
+                <h3 class="i18n" data-en="Legal & contract text" data-he="טקסטים משפטיים וחוזים"></h3>
+                <p class="i18n" data-en="Standard clauses, disclaimers, terms — paste exact wording every time without copy-paste from old emails." data-he="סעיפים סטנדרטיים, הסתייגויות, תנאים — הדביקו את הנוסח המדויק כל פעם בלי להעתיק ממיילים ישנים."></p>
             </div>
             <div class="use-card">
                 <div class="use-emoji">🏠</div>
-                <h3>Addresses & directions</h3>
-                <p>Your home address, office address, meeting spot directions — always one tap away.</p>
+                <h3 class="i18n" data-en="Addresses & directions" data-he="כתובות והוראות הגעה"></h3>
+                <p class="i18n" data-en="Your home address, office address, meeting spot directions — always one tap away." data-he="כתובת הבית, כתובת המשרד, הוראות הגעה לפגישה — תמיד במרחק לחיצה."></p>
             </div>
             <div class="use-card">
                 <div class="use-emoji">✉️</div>
-                <h3>Email signatures & intros</h3>
-                <p>Professional introductions, sign-offs, or bios ready to paste into any message.</p>
+                <h3 class="i18n" data-en="Email signatures & intros" data-he="חתימות מייל והצגה עצמית"></h3>
+                <p class="i18n" data-en="Professional introductions, sign-offs, or bios ready to paste into any message." data-he="הצגה עצמית מקצועית, חתימות או ביוגרפיה מוכנים להדבקה בכל הודעה."></p>
             </div>
         </div>
     </div>
@@ -547,49 +716,49 @@
 
 <!-- ── Features ── -->
 <section class="features">
-    <div class="section-label">Features</div>
-    <h2>Simple outside. Powerful inside.</h2>
+    <div class="section-label i18n" data-en="Features" data-he="תכונות"></div>
+    <h2 class="i18n" data-en="Simple outside. Powerful inside." data-he="פשוט מבחוץ. עוצמתי מבפנים."></h2>
     <div class="feat-grid">
         <div class="feat">
             <div class="feat-icon">🎨</div>
             <div>
-                <h3>Color-coded blocks</h3>
-                <p>Organize your texts by color so you find them instantly.</p>
+                <h3 class="i18n" data-en="Color-coded blocks" data-he="בלוקים צבעוניים"></h3>
+                <p class="i18n" data-en="Organize your texts by color so you find them instantly." data-he="ארגנו את הטקסטים לפי צבע כדי למצוא אותם מיד."></p>
             </div>
         </div>
         <div class="feat">
             <div class="feat-icon">🌐</div>
             <div>
-                <h3>Works everywhere</h3>
-                <p>WhatsApp, Gmail, SMS, Chrome, forms — any app with a text field.</p>
+                <h3 class="i18n" data-en="Works everywhere" data-he="עובד בכל מקום"></h3>
+                <p class="i18n" data-en="WhatsApp, Gmail, SMS, Chrome, forms — any app with a text field." data-he="וואטסאפ, ג'ימייל, SMS, כרום, טפסים — כל אפליקציה עם שדה טקסט."></p>
             </div>
         </div>
         <div class="feat">
             <div class="feat-icon">🔒</div>
             <div>
-                <h3>100% private</h3>
-                <p>All data stays on your phone. No cloud, no account, no data collection.</p>
+                <h3 class="i18n" data-en="100% private" data-he="100% פרטי"></h3>
+                <p class="i18n" data-en="All data stays on your phone. No cloud, no account, no data collection." data-he="כל המידע נשאר על הטלפון שלכם. בלי ענן, בלי חשבון, בלי איסוף מידע."></p>
             </div>
         </div>
         <div class="feat">
             <div class="feat-icon">🌍</div>
             <div>
-                <h3>English + Hebrew</h3>
-                <p>Full support for both languages, including right-to-left text.</p>
+                <h3 class="i18n" data-en="English + Hebrew" data-he="אנגלית + עברית"></h3>
+                <p class="i18n" data-en="Full support for both languages, including right-to-left text." data-he="תמיכה מלאה בשתי השפות, כולל טקסט מימין לשמאל."></p>
             </div>
         </div>
         <div class="feat">
             <div class="feat-icon">📤</div>
             <div>
-                <h3>Share into MacroKey</h3>
-                <p>See useful text in another app? Share it directly to MacroKey as a new block.</p>
+                <h3 class="i18n" data-en="Share into MacroKey" data-he="שיתוף ל-MacroKey"></h3>
+                <p class="i18n" data-en="See useful text in another app? Share it directly to MacroKey as a new block." data-he="מצאתם טקסט שימושי באפליקציה אחרת? שתפו אותו ישירות ל-MacroKey כבלוק חדש."></p>
             </div>
         </div>
         <div class="feat">
             <div class="feat-icon">⚡</div>
             <div>
-                <h3>No keyboard switching</h3>
-                <p>The floating button works on top of any app. No need to change keyboards.</p>
+                <h3 class="i18n" data-en="No keyboard switching" data-he="בלי החלפת מקלדת"></h3>
+                <p class="i18n" data-en="The floating button works on top of any app. No need to change keyboards." data-he="הכפתור הצף עובד מעל כל אפליקציה. אין צורך להחליף מקלדות."></p>
             </div>
         </div>
     </div>
@@ -598,19 +767,21 @@
 <!-- ── Pricing ── -->
 <section class="pricing">
     <div class="pricing-inner">
-        <div class="section-label">Pricing</div>
-        <h2>No subscriptions. Ever.</h2>
-        <p>Try MacroKey free for 7 days. If you love it, one small payment unlocks everything — forever.</p>
+        <div class="section-label i18n" data-en="Pricing" data-he="מחיר"></div>
+        <h2 class="i18n" data-en="No subscriptions. Ever." data-he="בלי מנויים. לעולם."></h2>
+        <p class="i18n" data-en="Try MacroKey free for 7 days. If you love it, one small payment unlocks everything — forever." data-he="נסו את MacroKey חינם למשך 7 ימים. אם אהבתם, תשלום קטן אחד פותח את הכל — לתמיד."></p>
         <div class="price-card">
-            <div class="price-tag">$4.99<small>one-time payment</small></div>
+            <div class="price-tag">$4.99<small class="i18n" data-en="one-time payment" data-he="תשלום חד-פעמי"></small></div>
             <ul class="price-perks">
-                <li>Unlimited text blocks</li>
-                <li>All colors and customization</li>
-                <li>Share receiver</li>
-                <li>Free 7-day trial included</li>
-                <li>All future updates</li>
+                <li class="i18n" data-en="Unlimited text blocks" data-he="בלוקים ללא הגבלה"></li>
+                <li class="i18n" data-en="All colors and customization" data-he="כל הצבעים וההתאמות"></li>
+                <li class="i18n" data-en="Share receiver" data-he="שמירה משיתוף"></li>
+                <li class="i18n" data-en="Free 7-day trial included" data-he="כולל 7 ימי ניסיון חינם"></li>
+                <li class="i18n" data-en="All future updates" data-he="כל העדכונים העתידיים"></li>
             </ul>
-            <a href="https://play.google.com/store/apps/details?id=com.macrokey" class="cta-btn" style="width:100%;justify-content:center;">Get MacroKey</a>
+            <a href="https://play.google.com/store/apps/details?id=com.macrokey" class="cta-btn" style="width:100%;justify-content:center;">
+                <span class="i18n" data-en="Get MacroKey" data-he="הורידו את MacroKey"></span>
+            </a>
         </div>
     </div>
 </section>
@@ -618,12 +789,46 @@
 <!-- ── Footer ── -->
 <footer>
     <div class="footer-links">
-        <a href="privacy.html">Privacy Policy</a>
+        <a href="privacy.html" class="i18n" data-en="Privacy Policy" data-he="מדיניות פרטיות"></a>
         <a href="https://play.google.com/store/apps/details?id=com.macrokey">Google Play</a>
     </div>
-    <p>© 2026 MacroKey. All rights reserved.</p>
-    <p style="margin-top:0.5rem;">Questions? Contact us through our <a href="https://play.google.com/store/apps/details?id=com.macrokey">Google Play listing</a>.</p>
+    <p>&copy; 2026 MacroKey. <span class="i18n" data-en="All rights reserved." data-he="כל הזכויות שמורות."></span></p>
+    <p style="margin-top:0.5rem;"><span class="i18n" data-en="Questions? Contact us through our " data-he="שאלות? צרו קשר דרך "></span><a href="https://play.google.com/store/apps/details?id=com.macrokey" class="i18n" data-en="Google Play listing" data-he="דף Google Play שלנו"></a>.</p>
 </footer>
+
+<script>
+function setLang(lang) {
+    var html = document.documentElement;
+    html.setAttribute('lang', lang);
+    html.setAttribute('dir', lang === 'he' ? 'rtl' : 'ltr');
+
+    document.querySelectorAll('.lang-btn').forEach(function(btn) {
+        btn.classList.remove('active');
+    });
+    document.querySelector('.lang-btn[onclick="setLang(\'' + lang + '\')"]').classList.add('active');
+
+    document.querySelectorAll('.i18n').forEach(function(el) {
+        var text = el.getAttribute('data-' + lang);
+        if (text) el.innerHTML = text;
+    });
+
+    try { localStorage.setItem('macrokey-lang', lang); } catch(e) {}
+}
+
+// Auto-detect language on load
+(function() {
+    var saved = null;
+    try { saved = localStorage.getItem('macrokey-lang'); } catch(e) {}
+    if (saved) {
+        setLang(saved);
+    } else {
+        var userLang = (navigator.language || navigator.userLanguage || '').toLowerCase();
+        if (userLang.startsWith('he') || userLang.startsWith('iw')) {
+            setLang('he');
+        }
+    }
+})();
+</script>
 
 </body>
 </html>
