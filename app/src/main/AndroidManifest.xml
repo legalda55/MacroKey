@@ -5,8 +5,11 @@
     <!-- הצגה מעל אפליקציות — לכפתור הצף -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
+    <!-- Google Play Billing -->
+    <uses-permission android:name="com.android.vending.BILLING" />
+
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="MacroKey"
         android:supportsRtl="true"
@@ -41,11 +44,17 @@
             android:exported="false"
             android:label="MacroKey" />
 
+        <!-- מסך שדרוג (Paywall) -->
+        <activity
+            android:name=".ui.PaywallActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MacroKey" />
+
         <!-- קבלת טקסט משיתוף -->
         <activity
             android:name=".ui.ShareReceiverActivity"
             android:exported="true"
-            android:label="שמור ב-MacroKey"
+            android:label="@string/share_receiver_label"
             android:theme="@style/Theme.MacroKey.Transparent">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
@@ -53,6 +62,17 @@
                 <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
+
+        <!-- FileProvider for sharing block images -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.macrokey.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <!-- שירות הליבה: נגישות + כפתור צף -->
         <service

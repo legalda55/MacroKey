@@ -2,6 +2,8 @@
 <resources>
     <style name="Theme.MacroKey" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:statusBarColor">#E64A19</item>
+        <item name="android:navigationBarColor">#FFF8F0</item>
+        <item name="android:windowBackground">@color/background</item>
     </style>
 
     <style name="Theme.MacroKey.Transparent" parent="android:Theme.Material.Light.NoActionBar">

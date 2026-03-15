@@ -22,5 +22,8 @@ data class MacroBlock(
     val sortOrder: Int = 0,
 
     @ColumnInfo(name = "usage_count")
-    val usageCount: Int = 0
+    val usageCount: Int = 0,
+
+    @ColumnInfo(name = "image_path")
+    val imagePath: String? = null
 )

@@ -11,6 +11,8 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -29,6 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.macrokey.R
+import com.macrokey.billing.TrialManager
 import com.macrokey.util.LocaleHelper
 import kotlinx.coroutines.launch
 
@@ -53,6 +56,7 @@ class OnboardingActivity : ComponentActivity() {
                 OnboardingScreen(
                     onFinish = {
                         prefs.edit().putBoolean("onboarding_done", true).apply()
+                        TrialManager.recordInstallIfNeeded(this)
                         startMainAndFinish()
                     },
                     onLanguageToggle = {
@@ -284,6 +288,7 @@ fun OnboardingPage(
 @Composable
 fun OnboardingPermissionsPage(context: Context) {
     var refreshTrigger by remember { mutableStateOf(0) }
+    var showAccessibilityDisclosure by remember { mutableStateOf(false) }
 
     val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -338,7 +343,7 @@ fun OnboardingPermissionsPage(context: Context) {
             label = stringResource(R.string.onboarding_enable_accessibility),
             isEnabled = isAccessibilityOn,
             onClick = {
-                context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                showAccessibilityDisclosure = true
             }
         )
 
@@ -373,6 +378,75 @@ fun OnboardingPermissionsPage(context: Context) {
             }
         }
     }
+
+    if (showAccessibilityDisclosure) {
+        AccessibilityDisclosureDialog(
+            onAllow = {
+                showAccessibilityDisclosure = false
+                context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            },
+            onDismiss = {
+                showAccessibilityDisclosure = false
+            }
+        )
+    }
+}
+
+// ══════════════════════════════════════════════
+// Accessibility Prominent Disclosure Dialog
+// ══════════════════════════════════════════════
+
+@Composable
+fun AccessibilityDisclosureDialog(
+    onAllow: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                stringResource(R.string.disclosure_title),
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = Color(0xFFE64A19)
+            )
+        },
+        text = {
+            val scrollState = rememberScrollState()
+            Column(
+                modifier = Modifier
+                    .heightIn(max = 400.dp)
+                    .verticalScroll(scrollState)
+            ) {
+                Text(
+                    text = stringResource(R.string.disclosure_body),
+                    fontSize = 14.sp,
+                    color = Color(0xFF333333),
+                    lineHeight = 22.sp
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onAllow,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE64A19)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    stringResource(R.string.disclosure_allow),
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    stringResource(R.string.disclosure_not_now),
+                    color = Color.Gray
+                )
+            }
+        }
+    )
 }
 
 @Composable

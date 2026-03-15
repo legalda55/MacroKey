@@ -64,6 +64,15 @@ fun GuideScreen(onBack: () -> Unit) {
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Intro paragraph
+            Text(
+                text = stringResource(R.string.guide_intro),
+                fontSize = 15.sp,
+                color = Color(0xFF555555),
+                lineHeight = 22.sp,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
             GuideStep(
                 emoji = "➕",
                 title = stringResource(R.string.guide_step1_title),
@@ -94,6 +103,22 @@ fun GuideScreen(onBack: () -> Unit) {
                 title = stringResource(R.string.guide_tips_title),
                 description = stringResource(R.string.guide_tips_desc)
             )
+
+            // Outro
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFE64A19))
+            ) {
+                Text(
+                    text = stringResource(R.string.guide_outro),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White,
+                    lineHeight = 22.sp,
+                    modifier = Modifier.padding(20.dp)
+                )
+            }
 
             Spacer(Modifier.height(16.dp))
         }

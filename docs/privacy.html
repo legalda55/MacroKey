@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy — MacroKey</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --orange: #E64A19;
+            --cream: #FFF8F0;
+            --dark: #1A1A1A;
+            --gray: #666;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            color: var(--dark);
+            background: var(--cream);
+            -webkit-font-smoothing: antialiased;
+        }
+        .lang-toggle {
+            position: fixed;
+            top: 1.2rem;
+            right: 1.2rem;
+            z-index: 1000;
+            display: flex;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+            border: 1px solid rgba(230,74,25,0.15);
+        }
+        .lang-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            background: transparent;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--gray);
+            transition: all 0.2s ease;
+        }
+        .lang-btn.active {
+            background: var(--orange);
+            color: white;
+        }
+        html[dir="rtl"] .lang-toggle {
+            right: auto;
+            left: 1.2rem;
+        }
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 3rem 2rem 4rem;
+        }
+        .back {
+            display: inline-block;
+            color: var(--orange);
+            text-decoration: none;
+            font-weight: 600;
+            margin-bottom: 2rem;
+        }
+        .back:hover { text-decoration: underline; }
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        .updated {
+            color: var(--gray);
+            font-size: 0.9rem;
+            margin-bottom: 2.5rem;
+        }
+        h2 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-top: 2rem;
+            margin-bottom: 0.6rem;
+            color: var(--orange);
+        }
+        p {
+            font-size: 1rem;
+            line-height: 1.75;
+            color: #444;
+            margin-bottom: 1rem;
+        }
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--gray);
+            font-size: 0.85rem;
+        }
+        footer a { color: var(--orange); text-decoration: none; }
+    </style>
+</head>
+<body>
+
+<div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" onclick="setLang('he')">עב</button>
+</div>
+
+<div class="container">
+    <a href="index.html" class="back i18n" data-en="&larr; Back to MacroKey" data-he="&rarr; חזרה ל-MacroKey"></a>
+    <h1 class="i18n" data-en="Privacy Policy" data-he="מדיניות פרטיות"></h1>
+    <p class="updated i18n" data-en="Last updated: March 14, 2026" data-he="עדכון אחרון: 14 במרץ, 2026"></p>
+
+    <h2 class="i18n" data-en="Overview" data-he="סקירה כללית"></h2>
+    <p class="i18n" data-en="MacroKey is a productivity app that helps you save and paste text blocks on your Android device. We are committed to protecting your privacy. This policy explains what data MacroKey handles and how." data-he="MacroKey היא אפליקציית פרודוקטיביות שעוזרת לכם לשמור ולהדביק בלוקי טקסט במכשיר האנדרואיד שלכם. אנחנו מחויבים להגנה על הפרטיות שלכם. מדיניות זו מסבירה איזה מידע MacroKey מטפלת בו ואיך."></p>
+
+    <h2 class="i18n" data-en="Data Storage" data-he="אחסון מידע"></h2>
+    <p class="i18n" data-en="All text blocks you create in MacroKey are stored locally on your device using an on-device database. Your data never leaves your phone. There are no servers, no cloud storage, and no remote backups." data-he="כל בלוקי הטקסט שאתם יוצרים ב-MacroKey נשמרים מקומית על המכשיר שלכם בבסיס נתונים מקומי. המידע שלכם אף פעם לא עוזב את הטלפון. אין שרתים, אין אחסון ענן ואין גיבויים מרוחקים."></p>
+
+    <h2 class="i18n" data-en="Data Collection" data-he="איסוף מידע"></h2>
+    <p class="i18n" data-en="MacroKey does not collect, transmit, or share any personal data. We do not collect your name, email address, phone number, location, contacts, or any other personal information." data-he="MacroKey לא אוספת, מעבירה או משתפת שום מידע אישי. אנחנו לא אוספים את השם, כתובת המייל, מספר הטלפון, המיקום, אנשי הקשר או כל מידע אישי אחר שלכם."></p>
+    <p class="i18n" data-en="MacroKey does not use analytics services, tracking tools, or advertising SDKs of any kind." data-he="MacroKey לא משתמשת בשירותי אנליטיקה, כלי מעקב או SDK פרסומי מכל סוג שהוא."></p>
+
+    <h2 class="i18n" data-en="Accessibility Service" data-he="שירות נגישות"></h2>
+    <p class="i18n" data-en="MacroKey uses Android's Accessibility Service solely to paste text into other apps when you tap a text block from the floating panel. This service is used only to perform the paste action you initiate. It does not read, record, or transmit any content from other apps." data-he="MacroKey משתמשת בשירות הנגישות של אנדרואיד אך ורק כדי להדביק טקסט באפליקציות אחרות כשאתם לוחצים על בלוק טקסט מהפאנל הצף. השירות משמש רק לביצוע פעולת ההדבקה שאתם יוזמים. הוא לא קורא, מתעד או מעביר שום תוכן מאפליקציות אחרות."></p>
+
+    <h2 class="i18n" data-en="Overlay Permission" data-he="הרשאת הצגה מעל אפליקציות"></h2>
+    <p class="i18n" data-en="MacroKey uses the &quot;Display over other apps&quot; permission to show the floating button (M) on your screen. This overlay is used only to display your text blocks for quick access." data-he="MacroKey משתמשת בהרשאת &quot;הצגה מעל אפליקציות אחרות&quot; כדי להציג את הכפתור הצף (M) על המסך. שכבת-העל משמשת רק להצגת בלוקי הטקסט שלכם לגישה מהירה."></p>
+
+    <h2 class="i18n" data-en="Purchases" data-he="רכישות"></h2>
+    <p class="i18n" data-en="MacroKey offers an optional one-time in-app purchase through Google Play. Payment processing is handled entirely by Google Play. We do not have access to your payment information." data-he="MacroKey מציעה רכישה חד-פעמית אופציונלית דרך Google Play. עיבוד התשלום מתבצע במלואו על ידי Google Play. אין לנו גישה לפרטי התשלום שלכם."></p>
+
+    <h2 class="i18n" data-en="Third-Party Services" data-he="שירותי צד שלישי"></h2>
+    <p class="i18n" data-en="MacroKey does not integrate with any third-party services, APIs, or SDKs that collect user data. The only third-party service used is Google Play Billing for processing purchases." data-he="MacroKey לא משתלבת עם שירותי צד שלישי, ממשקי API או SDK שאוספים מידע משתמשים. שירות הצד השלישי היחיד בשימוש הוא Google Play Billing לעיבוד רכישות."></p>
+
+    <h2 class="i18n" data-en="Children's Privacy" data-he="פרטיות ילדים"></h2>
+    <p class="i18n" data-en="MacroKey is not directed at children under 13. We do not knowingly collect data from children." data-he="MacroKey אינה מיועדת לילדים מתחת לגיל 13. אנחנו לא אוספים ביודעין מידע מילדים."></p>
+
+    <h2 class="i18n" data-en="Changes to This Policy" data-he="שינויים במדיניות זו"></h2>
+    <p class="i18n" data-en="If we make changes to this privacy policy, the updated version will be posted on this page with a revised date." data-he="אם נבצע שינויים במדיניות פרטיות זו, הגרסה המעודכנת תפורסם בדף זה עם תאריך מעודכן."></p>
+
+    <h2 class="i18n" data-en="Contact" data-he="יצירת קשר"></h2>
+    <p>
+        <span class="i18n" data-en="If you have questions about this privacy policy, you can reach us through our listing on " data-he="אם יש לכם שאלות לגבי מדיניות פרטיות זו, אפשר ליצור איתנו קשר דרך הדף שלנו ב-"></span><a href="https://play.google.com/store/apps/details?id=com.macrokey" style="color:var(--orange)">Google Play</a>.
+    </p>
+</div>
+
+<footer>
+    <a href="index.html">MacroKey</a> &middot; &copy; 2026
+</footer>
+
+<script>
+function setLang(lang) {
+    var html = document.documentElement;
+    html.setAttribute('lang', lang);
+    html.setAttribute('dir', lang === 'he' ? 'rtl' : 'ltr');
+
+    document.querySelectorAll('.lang-btn').forEach(function(btn) {
+        btn.classList.remove('active');
+    });
+    document.querySelector('.lang-btn[onclick="setLang(\'' + lang + '\')"]').classList.add('active');
+
+    document.querySelectorAll('.i18n').forEach(function(el) {
+        var text = el.getAttribute('data-' + lang);
+        if (text) el.innerHTML = text;
+    });
+
+    try { localStorage.setItem('macrokey-lang', lang); } catch(e) {}
+}
+
+(function() {
+    var saved = null;
+    try { saved = localStorage.getItem('macrokey-lang'); } catch(e) {}
+    if (saved) {
+        setLang(saved);
+    } else {
+        var userLang = (navigator.language || navigator.userLanguage || '').toLowerCase();
+        if (userLang.startsWith('he') || userLang.startsWith('iw')) {
+            setLang('he');
+        }
+    }
+})();
+</script>
+
+</body>
+</html>

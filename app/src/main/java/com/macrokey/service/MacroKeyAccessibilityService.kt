@@ -2,14 +2,16 @@ package com.macrokey.service
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
-import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.text.InputType
@@ -22,9 +24,13 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import android.view.inputmethod.InputMethodManager
 import android.widget.*
+import com.macrokey.R
 import com.macrokey.data.MacroBlock
+import com.macrokey.util.ColorPalette
+import com.macrokey.util.ImageHelper
+import java.io.File
+import java.util.concurrent.CopyOnWriteArrayList
 import com.macrokey.data.MacroKeyDatabase
 import kotlinx.coroutines.*
 
@@ -58,11 +64,10 @@ class MacroKeyAccessibilityService : AccessibilityService() {
     // Views
     private var fabView: View? = null
     private var panelView: View? = null
-    private var feedbackView: View? = null
 
     // State
     private var isExpanded = false
-    private var blocks: List<MacroBlock> = emptyList()
+    private val blocks: MutableList<MacroBlock> = CopyOnWriteArrayList()
 
     // FAB drag tracking
     private var dragStartX = 0
@@ -72,16 +77,7 @@ class MacroKeyAccessibilityService : AccessibilityService() {
     private var isDragging = false
 
     // Predefined color palette for new blocks
-    private val colorPalette = listOf(
-        "#4CAF50", // ירוק
-        "#2196F3", // כחול
-        "#FF9800", // כתום
-        "#9C27B0", // סגול
-        "#F44336", // אדום
-        "#00BCD4", // טורקיז
-        "#795548", // חום
-        "#607D8B"  // אפור-כחול
-    )
+    private val colorPalette = ColorPalette.BLOCK_COLORS
 
     // ══════════════════════════════════════════════
     // Lifecycle
@@ -94,6 +90,7 @@ class MacroKeyAccessibilityService : AccessibilityService() {
 
         configureAccessibility()
         loadBlocksAndShowFab()
+        startFabWatchdog()
 
         Log.d(TAG, "MacroKey service connected")
     }
@@ -107,7 +104,11 @@ class MacroKeyAccessibilityService : AccessibilityService() {
         Log.d(TAG, "MacroKey service destroyed")
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) { /* לא נדרש */ }
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        // Use accessibility events as a heartbeat to ensure FAB is alive
+        ensureFabAlive()
+    }
+
     override fun onInterrupt() { Log.w(TAG, "Service interrupted") }
 
     private fun configureAccessibility() {
@@ -122,14 +123,48 @@ class MacroKeyAccessibilityService : AccessibilityService() {
     }
 
     // ══════════════════════════════════════════════
+    // FAB Health Check
+    // ══════════════════════════════════════════════
+
+    private var lastFabCheck = 0L
+
+    /**
+     * Ensures the FAB is visible. Called on every accessibility event as a heartbeat,
+     * but throttled to avoid excessive work. Also runs a periodic coroutine as backup.
+     */
+    private fun ensureFabAlive() {
+        val now = System.currentTimeMillis()
+        if (now - lastFabCheck < 3000) return // check at most every 3 seconds
+        lastFabCheck = now
+
+        val fab = fabView
+        if (fab == null || !fab.isAttachedToWindow) {
+            Log.w(TAG, "FAB missing — recreating")
+            fabView = null
+            createFab()
+        }
+    }
+
+    private fun startFabWatchdog() {
+        serviceScope.launch {
+            while (true) {
+                delay(10_000) // check every 10 seconds
+                ensureFabAlive()
+            }
+        }
+    }
+
+    // ══════════════════════════════════════════════
     // Data Loading
     // ══════════════════════════════════════════════
 
     private fun loadBlocksAndShowFab() {
         serviceScope.launch {
-            blocks = withContext(Dispatchers.IO) {
+            val loaded = withContext(Dispatchers.IO) {
                 MacroKeyDatabase.getInstance(applicationContext).blockDao().getAllBlocks()
             }
+            blocks.clear()
+            blocks.addAll(loaded)
             createFab()
             Log.d(TAG, "Loaded ${blocks.size} blocks")
         }
@@ -138,9 +173,11 @@ class MacroKeyAccessibilityService : AccessibilityService() {
     /** נקרא מבחוץ (מה-Settings app) כשמוסיפים/עורכים בלוקים */
     fun refreshBlocks() {
         serviceScope.launch {
-            blocks = withContext(Dispatchers.IO) {
+            val loaded = withContext(Dispatchers.IO) {
                 MacroKeyDatabase.getInstance(applicationContext).blockDao().getAllBlocks()
             }
+            blocks.clear()
+            blocks.addAll(loaded)
             // אם הפאנל פתוח — בנה מחדש
             if (isExpanded) {
                 removePanel()
@@ -154,7 +191,19 @@ class MacroKeyAccessibilityService : AccessibilityService() {
     // ══════════════════════════════════════════════
 
     private fun createFab() {
+        // Remove stale reference if the view is no longer attached
+        fabView?.let {
+            if (!it.isAttachedToWindow) {
+                fabView = null
+            }
+        }
         if (fabView != null) return
+
+        // Check overlay permission before trying to add view
+        if (!android.provider.Settings.canDrawOverlays(this)) {
+            Log.w(TAG, "createFab: no overlay permission, skipping")
+            return
+        }
 
         val sizePx = dp(44)
 
@@ -186,8 +235,11 @@ class MacroKeyAccessibilityService : AccessibilityService() {
 
         fab.setOnTouchListener(fabTouchListener(params))
 
-        safeAddView(fab, params)
-        fabView = fab
+        if (safeAddView(fab, params)) {
+            fabView = fab
+        } else {
+            Log.e(TAG, "createFab: failed to add FAB view")
+        }
     }
 
     private fun fabTouchListener(params: WindowManager.LayoutParams): View.OnTouchListener {
@@ -270,7 +322,7 @@ class MacroKeyAccessibilityService : AccessibilityService() {
 
         if (blocks.isEmpty()) {
             grid.addView(TextView(this).apply {
-                text = "אין בלוקים עדיין\nלחץ על + כדי להוסיף"
+                text = getString(R.string.no_blocks_hint)
                 setTextColor(Color.GRAY)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
                 gravity = Gravity.CENTER
@@ -299,7 +351,7 @@ class MacroKeyAccessibilityService : AccessibilityService() {
         }
 
         // כפתור + הוספת בלוק חדש
-        bottomRow.addView(createActionButton("＋ בלוק חדש", "#4CAF50") {
+        bottomRow.addView(createActionButton(getString(R.string.new_block_short), "#4CAF50") {
             removePanel()
             showAddBlockDialog()
         }.apply {
@@ -325,9 +377,10 @@ class MacroKeyAccessibilityService : AccessibilityService() {
             y = dp(200)
         }
 
-        safeAddView(container, params)
-        panelView = container
-        isExpanded = true
+        if (safeAddView(container, params)) {
+            panelView = container
+            isExpanded = true
+        }
     }
 
     private fun removePanel() {
@@ -351,23 +404,52 @@ class MacroKeyAccessibilityService : AccessibilityService() {
                 cornerRadius = dp(10).toFloat()
             }
 
-            addView(TextView(context).apply {
+            // Inner layout: horizontal with optional thumbnail + title
+            val innerLayout = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(4), dp(4), dp(4), dp(4))
+            }
+
+            // Add thumbnail if image exists
+            val thumbBitmap = loadThumbnail(block.imagePath, dp(32))
+            if (thumbBitmap != null) {
+                innerLayout.addView(ImageView(context).apply {
+                    setImageBitmap(thumbBitmap)
+                    scaleType = ImageView.ScaleType.CENTER_CROP
+                    val thumbSize = dp(32)
+                    layoutParams = LinearLayout.LayoutParams(thumbSize, thumbSize).apply {
+                        marginEnd = dp(4)
+                    }
+                    // Round corners via clip
+                    clipToOutline = true
+                    outlineProvider = object : android.view.ViewOutlineProvider() {
+                        override fun getOutline(view: View, outline: android.graphics.Outline) {
+                            outline.setRoundRect(0, 0, view.width, view.height, dp(6).toFloat())
+                        }
+                    }
+                })
+            }
+
+            innerLayout.addView(TextView(context).apply {
                 text = block.title
                 setTextColor(textColor)
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
                 maxLines = 2
-                setPadding(dp(4), dp(4), dp(4), dp(4))
-            }, FrameLayout.LayoutParams(
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            })
+
+            addView(innerLayout, FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT
             ))
 
-            // לחיצה = הזרקת טקסט
+            // לחיצה = הזרקת טקסט ו/או תמונה
             setOnClickListener {
-                injectText(block.content)
                 removePanel()
+                handleBlockClick(block)
                 incrementUsage(block.id)
             }
 
@@ -384,6 +466,32 @@ class MacroKeyAccessibilityService : AccessibilityService() {
                 height = dp(52)
                 setMargins(dp(3), dp(3), dp(3), dp(3))
             }
+        }
+    }
+
+    /** Load a small thumbnail bitmap for the floating panel */
+    private fun loadThumbnail(path: String?, sizePx: Int): Bitmap? {
+        if (path.isNullOrEmpty()) return null
+        return try {
+            val file = File(path)
+            if (!file.exists()) return null
+
+            // Decode bounds first
+            val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(path, opts)
+
+            // Calculate sample size for efficient loading
+            val maxDim = maxOf(opts.outWidth, opts.outHeight)
+            var sampleSize = 1
+            while (maxDim / sampleSize > sizePx * 2) sampleSize *= 2
+
+            val decodeOpts = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+            val bmp = BitmapFactory.decodeFile(path, decodeOpts) ?: return null
+            Bitmap.createScaledBitmap(bmp, sizePx, sizePx, true).also {
+                if (it !== bmp) bmp.recycle()
+            }
+        } catch (_: Exception) {
+            null
         }
     }
 
@@ -452,7 +560,7 @@ class MacroKeyAccessibilityService : AccessibilityService() {
         }
 
         titleRow.addView(TextView(this).apply {
-            text = "בלוק חדש"
+            text = getString(R.string.new_block)
             setTextColor(Color.parseColor("#E64A19"))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
             typeface = Typeface.DEFAULT_BOLD
@@ -474,10 +582,12 @@ class MacroKeyAccessibilityService : AccessibilityService() {
 
         // שדה שם
         val nameInput = EditText(this).apply {
-            hint = "שם הבלוק (למשל: פרטי בנק)"
+            hint = getString(R.string.block_name_hint)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             inputType = InputType.TYPE_CLASS_TEXT
             maxLines = 1
+            isLongClickable = true
+            setTextIsSelectable(true)
             background = createInputBackground()
             setPadding(dp(12), dp(10), dp(12), dp(10))
         }
@@ -488,16 +598,47 @@ class MacroKeyAccessibilityService : AccessibilityService() {
 
         // שדה תוכן
         val contentInput = EditText(this).apply {
-            hint = "הטקסט שיישלח בלחיצה..."
+            hint = getString(R.string.block_content_hint)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
             minLines = 2
             maxLines = 4
+            isLongClickable = true
+            setTextIsSelectable(true)
             background = createInputBackground()
             setPadding(dp(12), dp(10), dp(12), dp(10))
             gravity = Gravity.TOP or Gravity.END
         }
         dialogContainer.addView(contentInput, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply { bottomMargin = dp(4) })
+
+        // כפתור הדבקה
+        dialogContainer.addView(TextView(this).apply {
+            text = "📋 ${getString(R.string.text_copied).substringBefore("✓").trim()}"
+            setTextColor(Color.parseColor("#E64A19"))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            setPadding(dp(8), dp(6), dp(8), dp(6))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                setColor(Color.parseColor("#FFF3E0"))
+                cornerRadius = dp(6).toFloat()
+            }
+            setOnClickListener {
+                val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = cm.primaryClip
+                if (clip != null && clip.itemCount > 0) {
+                    val pastedText = clip.getItemAt(0).text?.toString() ?: ""
+                    if (pastedText.isNotEmpty()) {
+                        contentInput.append(pastedText)
+                        Toast.makeText(this@MacroKeyAccessibilityService, "✓", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
             LinearLayout.LayoutParams.WRAP_CONTENT
         ).apply { bottomMargin = dp(8) })
@@ -543,12 +684,12 @@ class MacroKeyAccessibilityService : AccessibilityService() {
             gravity = Gravity.CENTER
         }
 
-        buttonsRow.addView(createActionButton("שמור", "#4CAF50") {
+        buttonsRow.addView(createActionButton(getString(R.string.save), "#4CAF50") {
             val name = nameInput.text.toString().trim()
             val content = contentInput.text.toString().trim()
 
             if (name.isEmpty() || content.isEmpty()) {
-                Toast.makeText(this, "יש למלא שם ותוכן", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.fill_name_and_content), Toast.LENGTH_SHORT).show()
                 return@createActionButton
             }
 
@@ -568,7 +709,7 @@ class MacroKeyAccessibilityService : AccessibilityService() {
                 // רענון
                 refreshBlocks()
                 dialogView?.let { safeRemoveView(it) }
-                Toast.makeText(this@MacroKeyAccessibilityService, "✓ הבלוק נשמר!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MacroKeyAccessibilityService, getString(R.string.block_saved), Toast.LENGTH_SHORT).show()
             }
         }.apply {
             layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f).apply {
@@ -576,7 +717,7 @@ class MacroKeyAccessibilityService : AccessibilityService() {
             }
         })
 
-        buttonsRow.addView(createActionButton("ביטול", "#9E9E9E") {
+        buttonsRow.addView(createActionButton(getString(R.string.cancel), "#9E9E9E") {
             dialogView?.let { safeRemoveView(it) }
         }.apply {
             layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f).apply {
@@ -602,10 +743,9 @@ class MacroKeyAccessibilityService : AccessibilityService() {
             WindowManager.LayoutParams.MATCH_PARENT
         ).apply {
             gravity = Gravity.CENTER
-            // FLAG_NOT_TOUCH_MODAL: touches outside dialog pass through (nav bar works)
-            // NO FLAG_LAYOUT_IN_SCREEN: dialog stays above nav bar, not covering it
+            // Allow focus for keyboard + paste context menu
             flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
             softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
         }
 
@@ -623,6 +763,86 @@ class MacroKeyAccessibilityService : AccessibilityService() {
     }
 
     // ══════════════════════════════════════════════
+    // Block Click — טיפול בלחיצה על בלוק
+    // ══════════════════════════════════════════════
+
+    private fun handleBlockClick(block: MacroBlock) {
+        val hasText = block.content.isNotBlank()
+        val hasImage = !block.imagePath.isNullOrEmpty()
+
+        if (hasText && !hasImage) {
+            injectText(block.content)
+            return
+        }
+
+        if (hasImage) {
+            val imageUri = ImageHelper.getContentUri(applicationContext, block.imagePath)
+            if (imageUri != null) {
+                // If also has text, inject text first, then paste image
+                if (hasText) {
+                    injectText(block.content)
+                    serviceScope.launch {
+                        delay(400)
+                        pasteImageToField(imageUri)
+                    }
+                } else {
+                    pasteImageToField(imageUri)
+                }
+            } else if (hasText) {
+                injectText(block.content)
+            }
+            return
+        }
+
+        if (!hasText && !hasImage) {
+            Toast.makeText(this, getString(R.string.no_blocks_hint), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /**
+     * Copy image URI to clipboard and paste into the active field.
+     * If ACTION_PASTE fails, the image stays on clipboard for manual long-press paste.
+     */
+    private fun pasteImageToField(imageUri: Uri) {
+        serviceScope.launch {
+            try {
+                // Grant read permission to all apps via the clipboard
+                val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                val clip = ClipData.newUri(contentResolver, "MacroKey", imageUri)
+                cm.setPrimaryClip(clip)
+                // FileProvider automatically grants read permission via the URI
+
+                delay(150)
+
+                // Try to paste into active field
+                val node = findFocusedInput()
+                if (node != null) {
+                    val pasted = node.performAction(AccessibilityNodeInfo.ACTION_PASTE)
+                    node.recycle()
+                    if (pasted) {
+                        showCheckmark()
+                        return@launch
+                    }
+                }
+
+                // Paste didn't work — image is on clipboard, tell user
+                Toast.makeText(
+                    this@MacroKeyAccessibilityService,
+                    getString(R.string.image_copied),
+                    Toast.LENGTH_SHORT
+                ).show()
+            } catch (e: Exception) {
+                Log.e(TAG, "Image paste failed", e)
+                Toast.makeText(
+                    this@MacroKeyAccessibilityService,
+                    getString(R.string.image_copied),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    // ══════════════════════════════════════════════
     // TEXT INJECTION — הזרקת טקסט
     // ══════════════════════════════════════════════
 
@@ -636,40 +856,85 @@ class MacroKeyAccessibilityService : AccessibilityService() {
         val node = findFocusedInput()
 
         if (node != null) {
-            val success = trySetText(node, text) || tryPaste(node, text)
-            node.recycle()
-
-            if (success) {
+            if (trySetText(node, text)) {
+                node.recycle()
                 showCheckmark()
             } else {
-                clipboardFallback(text)
+                // Use coroutine for paste — non-blocking delay to let clipboard settle
+                serviceScope.launch {
+                    val success = tryPasteAsync(node, text)
+                    node.recycle()
+                    if (success) {
+                        clearClipboardDelayed()
+                        showCheckmark()
+                    } else {
+                        clipboardFallback(text)
+                    }
+                }
             }
         } else {
             clipboardFallback(text)
         }
     }
 
+    /** Clear clipboard after a short delay to avoid leaving sensitive text exposed */
+    private fun clearClipboardDelayed() {
+        serviceScope.launch {
+            delay(2000)
+            try {
+                val cm = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    cm.clearPrimaryClip()
+                } else {
+                    cm.setPrimaryClip(ClipData.newPlainText("", ""))
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
     private fun findFocusedInput(): AccessibilityNodeInfo? {
         // ניסיון 1: חיפוש ישיר
-        rootInActiveWindow?.let { root ->
-            root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)?.let { node ->
-                if (node.isEditable) return node
-                node.recycle()
+        var root1: AccessibilityNodeInfo? = null
+        try {
+            root1 = rootInActiveWindow
+            if (root1 != null) {
+                val node = root1.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+                if (node != null) {
+                    if (node.isEditable) return node
+                    node.recycle()
+                }
             }
+        } finally {
+            root1?.recycle()
         }
 
         // ניסיון 2: סריקת כל החלונות
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             for (window in windows) {
-                window.root?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)?.let { node ->
-                    if (node.isEditable) return node
-                    node.recycle()
+                var windowRoot: AccessibilityNodeInfo? = null
+                try {
+                    windowRoot = window.root ?: continue
+                    val node = windowRoot.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+                    if (node != null) {
+                        if (node.isEditable) return node
+                        node.recycle()
+                    }
+                } finally {
+                    windowRoot?.recycle()
                 }
             }
         }
 
         // ניסיון 3: סריקה רקורסיבית
-        rootInActiveWindow?.let { return findEditableRecursive(it) }
+        var root3: AccessibilityNodeInfo? = null
+        try {
+            root3 = rootInActiveWindow
+            if (root3 != null) {
+                return findEditableRecursive(root3)
+            }
+        } finally {
+            root3?.recycle()
+        }
 
         return null
     }
@@ -705,11 +970,11 @@ class MacroKeyAccessibilityService : AccessibilityService() {
         }
     }
 
-    /** ניסיון 2: העתקה + הדבקה */
-    private fun tryPaste(node: AccessibilityNodeInfo, text: String): Boolean {
+    /** ניסיון 2: העתקה + הדבקה (with non-blocking delay for clipboard settle) */
+    private suspend fun tryPasteAsync(node: AccessibilityNodeInfo, text: String): Boolean {
         return try {
             copyToClipboard(text)
-            Thread.sleep(50)
+            delay(50) // Brief pause to let clipboard settle — non-blocking
             node.performAction(AccessibilityNodeInfo.ACTION_PASTE)
         } catch (e: Exception) {
             Log.e(TAG, "PASTE failed", e)
@@ -720,7 +985,7 @@ class MacroKeyAccessibilityService : AccessibilityService() {
     /** ניסיון 3: העתקה + הודעה למשתמש */
     private fun clipboardFallback(text: String) {
         copyToClipboard(text)
-        Toast.makeText(this, "הטקסט הועתק ✓ הדביקי עם לחיצה ארוכה", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.text_copied), Toast.LENGTH_SHORT).show()
     }
 
     private fun copyToClipboard(text: String) {
@@ -779,9 +1044,14 @@ class MacroKeyAccessibilityService : AccessibilityService() {
         )
     }
 
-    private fun safeAddView(view: View, params: WindowManager.LayoutParams) {
-        try { windowManager.addView(view, params) }
-        catch (e: Exception) { Log.e(TAG, "addView failed", e) }
+    private fun safeAddView(view: View, params: WindowManager.LayoutParams): Boolean {
+        return try {
+            windowManager.addView(view, params)
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "addView failed", e)
+            false
+        }
     }
 
     private fun safeUpdateView(view: View, params: WindowManager.LayoutParams) {

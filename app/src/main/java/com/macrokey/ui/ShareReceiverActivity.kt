@@ -19,9 +19,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.macrokey.R
 import com.macrokey.data.MacroBlock
 import com.macrokey.data.MacroKeyDatabase
 import com.macrokey.service.MacroKeyAccessibilityService
+import com.macrokey.util.ColorPalette
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -46,7 +50,7 @@ class ShareReceiverActivity : ComponentActivity() {
         }
 
         if (sharedText.isBlank()) {
-            Toast.makeText(this, "לא התקבל טקסט", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.no_text_received), Toast.LENGTH_SHORT).show()
             finish()
             return
         }
@@ -65,7 +69,7 @@ class ShareReceiverActivity : ComponentActivity() {
     }
 
     private fun saveBlock(title: String, content: String, colorHex: String) {
-        kotlinx.coroutines.MainScope().launch {
+        lifecycleScope.launch {
             withContext(Dispatchers.IO) {
                 val dao = MacroKeyDatabase.getInstance(applicationContext).blockDao()
                 val count = dao.getBlockCount()
@@ -79,7 +83,7 @@ class ShareReceiverActivity : ComponentActivity() {
                 )
             }
             MacroKeyAccessibilityService.instance?.refreshBlocks()
-            Toast.makeText(this@ShareReceiverActivity, "✓ נשמר כבלוק!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this@ShareReceiverActivity, getString(R.string.saved_as_block), Toast.LENGTH_SHORT).show()
             finish()
         }
     }
@@ -92,12 +96,9 @@ fun SaveSharedTextScreen(
     onCancel: () -> Unit
 ) {
     var title by remember { mutableStateOf("") }
-    var selectedColor by remember { mutableStateOf("#4CAF50") }
+    var selectedColor by remember { mutableStateOf(ColorPalette.BLOCK_COLORS[0]) }
 
-    val colors = listOf(
-        "#4CAF50", "#2196F3", "#FF9800", "#9C27B0",
-        "#F44336", "#00BCD4", "#795548", "#607D8B"
-    )
+    val colors = ColorPalette.BLOCK_COLORS
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -111,7 +112,7 @@ fun SaveSharedTextScreen(
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
-                    "שמירה ל-MacroKey",
+                    stringResource(R.string.save_to_macrokey_title),
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
                     color = Color(0xFFE64A19)
@@ -138,14 +139,14 @@ fun SaveSharedTextScreen(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it.take(20) },
-                    label = { Text("שם הבלוק") },
+                    label = { Text(stringResource(R.string.block_name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(Modifier.height(12.dp))
 
-                Text("צבע:", fontSize = 13.sp, color = Color.Gray)
+                Text(stringResource(R.string.color_label), fontSize = 13.sp, color = Color.Gray)
                 Spacer(Modifier.height(4.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -170,7 +171,7 @@ fun SaveSharedTextScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onCancel) { Text("ביטול") }
+                    TextButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
                     Spacer(Modifier.width(8.dp))
                     Button(
                         onClick = {
@@ -180,7 +181,7 @@ fun SaveSharedTextScreen(
                             containerColor = Color(0xFFE64A19)
                         )
                     ) {
-                        Text("שמור")
+                        Text(stringResource(R.string.save))
                     }
                 }
             }

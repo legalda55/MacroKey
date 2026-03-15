@@ -2,12 +2,16 @@ package com.macrokey.ui
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,17 +29,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.macrokey.R
 import com.macrokey.data.MacroBlock
 import com.macrokey.data.MacroKeyDatabase
 import com.macrokey.service.MacroKeyAccessibilityService
+import com.macrokey.util.ColorPalette
+import com.macrokey.util.ImageHelper
 import com.macrokey.util.LocaleHelper
+import com.macrokey.billing.TrialManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -48,6 +58,15 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Trial check — redirect to Paywall if expired
+        TrialManager.recordInstallIfNeeded(this)
+        if (!TrialManager.canUseApp(this)) {
+            startActivity(Intent(this, PaywallActivity::class.java))
+            finish()
+            return
+        }
+
         setContent {
             MaterialTheme {
                 MacroKeySettingsScreen(
@@ -57,6 +76,13 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
+        }
+    }
+    override fun onResume() {
+        super.onResume()
+        if (!TrialManager.canUseApp(this)) {
+            startActivity(Intent(this, PaywallActivity::class.java))
+            finish()
         }
     }
 }
@@ -152,6 +178,13 @@ fun MacroKeySettingsScreen(onLanguageToggle: () -> Unit = {}) {
                                     context.startActivity(Intent(context, PrivacyActivity::class.java))
                                 }
                             )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.menu_website)) },
+                                onClick = {
+                                    menuExpanded = false
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://legaldan55.github.io/MacroKey/")))
+                                }
+                            )
                         }
                     }
                 }
@@ -173,6 +206,29 @@ fun MacroKeySettingsScreen(onLanguageToggle: () -> Unit = {}) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // ── Trial Banner ──
+            val trialActive = TrialManager.isTrialActive(context) && !TrialManager.hasPurchasedPro(context)
+            if (trialActive) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF22D67A)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.trial_banner, TrialManager.daysRemaining(context)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(10.dp),
+                            color = Color(0xFF0A0A0F),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            }
+
             // ── הרשאות ──
             item {
                 PermissionsCard(
@@ -215,7 +271,11 @@ fun MacroKeySettingsScreen(onLanguageToggle: () -> Unit = {}) {
                     onEdit = { editingBlock = block; showAddDialog = true },
                     onDelete = {
                         scope.launch {
-                            withContext(Dispatchers.IO) { dao.deleteBlock(block) }
+                            withContext(Dispatchers.IO) {
+                                // Delete associated image file
+                                ImageHelper.deleteImage(block.imagePath)
+                                dao.deleteBlock(block)
+                            }
                             refresh()
                         }
                     }
@@ -229,17 +289,23 @@ fun MacroKeySettingsScreen(onLanguageToggle: () -> Unit = {}) {
         AddEditBlockDialog(
             existing = editingBlock,
             onDismiss = { showAddDialog = false; editingBlock = null },
-            onSave = { title, content, color ->
+            onSave = { title, content, color, imagePath ->
                 scope.launch {
                     withContext(Dispatchers.IO) {
                         if (editingBlock != null) {
+                            // If image changed, delete old one
+                            val oldPath = editingBlock!!.imagePath
+                            if (oldPath != imagePath && oldPath != null) {
+                                ImageHelper.deleteImage(oldPath)
+                            }
                             dao.updateBlock(editingBlock!!.copy(
-                                title = title, content = content, colorHex = color
+                                title = title, content = content, colorHex = color,
+                                imagePath = imagePath
                             ))
                         } else {
                             dao.insertBlock(MacroBlock(
                                 title = title, content = content, colorHex = color,
-                                sortOrder = blocks.size
+                                sortOrder = blocks.size, imagePath = imagePath
                             ))
                         }
                     }
@@ -262,6 +328,8 @@ fun PermissionsCard(
     hasOverlayPermission: Boolean,
     context: Context
 ) {
+    var showAccessibilityDisclosure by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -281,7 +349,7 @@ fun PermissionsCard(
                 label = stringResource(R.string.accessibility_service),
                 isEnabled = isAccessibilityOn,
                 onClick = {
-                    context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    showAccessibilityDisclosure = true
                 }
             )
 
@@ -305,6 +373,18 @@ fun PermissionsCard(
                 Text(stringResource(R.string.all_set), color = Color(0xFF4CAF50))
             }
         }
+    }
+
+    if (showAccessibilityDisclosure) {
+        AccessibilityDisclosureDialog(
+            onAllow = {
+                showAccessibilityDisclosure = false
+                context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            },
+            onDismiss = {
+                showAccessibilityDisclosure = false
+            }
+        )
     }
 }
 
@@ -332,12 +412,21 @@ fun PermissionRow(label: String, isEnabled: Boolean, onClick: () -> Unit) {
 }
 
 // ══════════════════════════════════════════════
-// Block Card
+// Block Card — enlarged with image support
 // ══════════════════════════════════════════════
 
 @Composable
 fun BlockCard(block: MacroBlock, onEdit: () -> Unit, onDelete: () -> Unit) {
     val blockColor = parseComposeColor(block.colorHex)
+
+    // Load image bitmap if exists
+    val imageBitmap = remember(block.imagePath) {
+        block.imagePath?.let { path ->
+            try {
+                BitmapFactory.decodeFile(path)?.asImageBitmap()
+            } catch (_: Exception) { null }
+        }
+    }
 
     Card(
         modifier = Modifier
@@ -345,69 +434,130 @@ fun BlockCard(block: MacroBlock, onEdit: () -> Unit, onDelete: () -> Unit) {
             .clickable { onEdit() },
         shape = RoundedCornerShape(12.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            // ── Color strip on left ──
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(blockColor),
-                contentAlignment = Alignment.Center
+                    .width(6.dp)
+                    .heightIn(min = 90.dp)
+                    .fillMaxHeight()
+                    .background(blockColor)
+            )
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(12.dp)
             ) {
-                Text(
-                    block.title.take(2),
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
-                )
-            }
+                // ── Top row: thumbnail + title ──
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (imageBitmap != null) {
+                        Image(
+                            bitmap = imageBitmap,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                        Spacer(Modifier.width(10.dp))
+                    }
 
-            Spacer(Modifier.width(12.dp))
+                    Text(
+                        text = block.title,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 17.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
 
-            Column(modifier = Modifier.weight(1f)) {
-                Text(block.title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                Text(
-                    block.content.take(60) + if (block.content.length > 60) "..." else "",
-                    color = Color.Gray,
-                    fontSize = 12.sp,
-                    maxLines = 2
-                )
-            }
+                    IconButton(onClick = onDelete) {
+                        Icon(
+                            Icons.Default.Delete,
+                            stringResource(R.string.delete),
+                            tint = Color(0xFFE53935)
+                        )
+                    }
+                }
 
-            IconButton(onClick = onDelete) {
-                Icon(
-                    Icons.Default.Delete,
-                    stringResource(R.string.delete),
-                    tint = Color(0xFFE53935)
-                )
+                // ── Bottom: content preview ──
+                if (block.content.isNotBlank()) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = block.content.take(120) + if (block.content.length > 120) "..." else "",
+                        color = Color.Gray,
+                        fontSize = 13.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                } else if (block.imagePath != null) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = "\uD83D\uDDBC Image",
+                        color = Color.Gray,
+                        fontSize = 13.sp
+                    )
+                }
             }
         }
     }
 }
 
 // ══════════════════════════════════════════════
-// Add/Edit Dialog
+// Add/Edit Dialog — with image picker
 // ══════════════════════════════════════════════
 
 @Composable
 fun AddEditBlockDialog(
     existing: MacroBlock?,
     onDismiss: () -> Unit,
-    onSave: (title: String, content: String, colorHex: String) -> Unit
+    onSave: (title: String, content: String, colorHex: String, imagePath: String?) -> Unit
 ) {
+    val context = LocalContext.current
+
     var title by remember { mutableStateOf(existing?.title ?: "") }
     var content by remember { mutableStateOf(existing?.content ?: "") }
-    var selectedColor by remember { mutableStateOf(existing?.colorHex ?: "#4CAF50") }
+    var selectedColor by remember { mutableStateOf(existing?.colorHex ?: ColorPalette.BLOCK_COLORS[0]) }
+    var imagePath by remember { mutableStateOf(existing?.imagePath) }
 
-    val colors = listOf(
-        "#4CAF50", "#2196F3", "#FF9800", "#9C27B0",
-        "#F44336", "#00BCD4", "#795548", "#607D8B"
-    )
+    // Image bitmap for preview
+    val imageBitmap = remember(imagePath) {
+        imagePath?.let { path ->
+            try {
+                BitmapFactory.decodeFile(path)?.asImageBitmap()
+            } catch (_: Exception) { null }
+        }
+    }
+
+    // Image picker launcher
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            // Delete old image if replacing
+            if (imagePath != null && imagePath != existing?.imagePath) {
+                ImageHelper.deleteImage(imagePath)
+            }
+            val newPath = ImageHelper.saveImageFromUri(context, uri)
+            if (newPath != null) {
+                imagePath = newPath
+            } else {
+                Toast.makeText(context, "Failed to load image", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    val colors = ColorPalette.BLOCK_COLORS
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            // Clean up newly picked image if user cancels
+            if (imagePath != null && imagePath != existing?.imagePath) {
+                ImageHelper.deleteImage(imagePath)
+            }
+            onDismiss()
+        },
         title = {
             Text(
                 if (existing != null) stringResource(R.string.edit_block)
@@ -425,18 +575,93 @@ fun AddEditBlockDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(10.dp))
+
+                // ── Image section — prominent, above text ──
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFF5F5F5))
+                        .clickable { imagePickerLauncher.launch("image/*") }
+                        .padding(12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (imageBitmap != null) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Image(
+                                bitmap = imageBitmap,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    stringResource(R.string.image_attached),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = Color(0xFF4CAF50)
+                                )
+                                Text(
+                                    stringResource(R.string.tap_to_change),
+                                    fontSize = 12.sp,
+                                    color = Color.Gray
+                                )
+                            }
+                            IconButton(onClick = {
+                                if (imagePath != existing?.imagePath) {
+                                    ImageHelper.deleteImage(imagePath)
+                                }
+                                imagePath = null
+                            }) {
+                                Text("✕", color = Color(0xFFE53935), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("\uD83D\uDDBC", fontSize = 28.sp)
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                stringResource(R.string.add_image),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFE64A19)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(10.dp))
 
                 OutlinedTextField(
                     value = content,
                     onValueChange = { content = it },
                     label = { Text(stringResource(R.string.block_content)) },
-                    minLines = 3,
-                    maxLines = 8,
-                    modifier = Modifier.fillMaxWidth()
+                    minLines = 5,
+                    maxLines = 10,
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = {
+                        val clipContext = LocalContext.current
+                        IconButton(onClick = {
+                            val clipboard = clipContext.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                            val clip = clipboard.primaryClip
+                            if (clip != null && clip.itemCount > 0) {
+                                val pastedText = clip.getItemAt(0).text?.toString() ?: ""
+                                content = if (content.isEmpty()) pastedText else content + pastedText
+                            }
+                        }) {
+                            Text("\uD83D\uDCCB", fontSize = 18.sp)
+                        }
+                    }
                 )
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(10.dp))
 
                 Text(stringResource(R.string.color_label), fontSize = 13.sp, color = Color.Gray)
                 Spacer(Modifier.height(4.dp))
@@ -462,8 +687,8 @@ fun AddEditBlockDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    if (title.isNotBlank() && content.isNotBlank()) {
-                        onSave(title.trim(), content.trim(), selectedColor)
+                    if (title.isNotBlank() && (content.isNotBlank() || imagePath != null)) {
+                        onSave(title.trim(), content.trim(), selectedColor, imagePath)
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE64A19))
@@ -472,7 +697,13 @@ fun AddEditBlockDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+            TextButton(onClick = {
+                // Clean up newly picked image if user cancels
+                if (imagePath != null && imagePath != existing?.imagePath) {
+                    ImageHelper.deleteImage(imagePath)
+                }
+                onDismiss()
+            }) { Text(stringResource(R.string.cancel)) }
         }
     )
 }
@@ -493,5 +724,6 @@ fun isAccessibilityServiceEnabled(context: Context): Boolean {
         context.contentResolver,
         Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
     ) ?: return false
-    return enabledServices.contains(service)
+    // Split by ':' to match exact service components, preventing substring false positives
+    return enabledServices.split(':').any { it.equals(service, ignoreCase = true) }
 }
